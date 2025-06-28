@@ -444,7 +444,7 @@ const GaugeMeter = ({ score }) => {
       stiffness: 80,
       damping: 12,
     });
-  }, [score]);
+  }, [score, angle]);
 
   // Calculate a credit score range (300-850) for display
   const creditScore = Math.round(300 + (score / 100) * 550);
@@ -538,7 +538,7 @@ function ResultsDashboard() {
     navigate('/form');
     return null;
   }
-  const { predicted_class, probability, credit_score_label, input } = state;
+  const { predicted_class, probability, credit_score_label } = state;
   
   // Map credit score labels to banking terminology
   const getRiskCategory = (label) => {
@@ -584,7 +584,7 @@ function ScoreBreakdown() {
   const location = useLocation();
   const { state } = location;
   if (!state) return <div className="container">No assessment data available.</div>;
-  const { input, probability, credit_score_label } = state;
+  const { input: formInput, probability, credit_score_label } = state;
   
   // Map credit score labels to banking terminology
   const getRiskCategory = (label) => {
@@ -610,7 +610,7 @@ function ScoreBreakdown() {
       </div>
       <h3>Financial Profile Data</h3>
       <div className="breakdown-grid">
-        {Object.entries(input).map(([k, v]) => (
+        {Object.entries(formInput).map(([k, v]) => (
           <div key={k} className="breakdown-item">
             <span className="feature-name">{k}</span>
             <span className="feature-value">{v}</span>
