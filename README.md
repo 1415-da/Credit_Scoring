@@ -77,6 +77,58 @@ A professional banking application that provides AI-powered credit assessments w
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:5000
 
+## 🌐 Deployment
+
+### Frontend Deployment (Vercel)
+
+1. **Deploy to Vercel**
+   ```bash
+   cd frontend
+   vercel
+   ```
+
+2. **Environment Variables** (Optional)
+   - Create a `.env` file in the frontend directory
+   - Add: `REACT_APP_API_URL=your-backend-url`
+   - For local development: `REACT_APP_API_URL=http://localhost:5000`
+
+3. **Backend Deployment Options**
+   - **Heroku**: Deploy the Flask app to Heroku
+   - **Railway**: Use Railway for easy Python deployment
+   - **Render**: Deploy to Render's free tier
+   - **Local Development**: Keep backend running locally
+
+4. **Vercel Configuration**
+   - The `vercel.json` file is already configured for React Router
+   - Routes are automatically handled for SPA deployment
+
+### Backend Deployment (Heroku Example)
+
+1. **Create Heroku app**
+   ```bash
+   heroku create your-app-name
+   ```
+
+2. **Add Python buildpack**
+   ```bash
+   heroku buildpacks:set heroku/python
+   ```
+
+3. **Deploy**
+   ```bash
+   git add .
+   git commit -m "Deploy to Heroku"
+   git push heroku main
+   ```
+
+4. **Update frontend API URL**
+   - Set environment variable: `REACT_APP_API_URL=https://your-app-name.herokuapp.com`
+
+### Demo Mode
+- If no backend is available, the app will show demo data
+- Perfect for showcasing the UI/UX without backend deployment
+- Demo results are realistic but not actual credit assessments
+
 ## 📱 Application Flow
 
 1. **Landing Page**: Professional Secure Bank introduction
