@@ -1,53 +1,304 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, useMotionValue, animate } from "framer-motion";
 import './App.css';
 
-const FEATURES = [
-  'DerogCnt', 'CollectCnt', 'BanruptcyInd', 'InqCnt06', 'InqTimeLast',
-  'InqFinanceCnt24', 'TLTimeFirst', 'TLTimeLast', 'TLCnt03', 'TLCnt12',
-  'TLCnt24', 'TLCnt', 'TLSum', 'TLMaxSum', 'TLSatCnt', 'TLDel60Cnt',
-  'TLBadCnt24', 'TL75UtilCnt', 'TL50UtilCnt', 'TLBalHCPct', 'TLSatPct',
-  'TLDel3060Cnt24', 'TLDel90Cnt24', 'TLDel60CntAll', 'TLOpenPct',
-  'TLBadDerogCnt', 'TLOpen24Pct'
-];
+// Organized features by category for better form layout
+const FEATURE_CATEGORIES = {
+  'Credit History & Inquiries': [
+    'InqCnt06',
+    'InqTimeLast', 
+    'InqFinanceCnt24',
+    'TLTimeFirst',
+    'TLTimeLast'
+  ],
+  'Account Activity': [
+    'TLCnt03',
+    'TLCnt12', 
+    'TLCnt24',
+    'TLCnt',
+    'TLOpenPct',
+    'TLOpen24Pct'
+  ],
+  'Account Balances': [
+    'TLSum',
+    'TLMaxSum',
+    'TLBalHCPct'
+  ],
+  'Account Status': [
+    'TLSatCnt',
+    'TLSatPct',
+    'TLDel60Cnt',
+    'TLDel60CntAll',
+    'TLDel3060Cnt24',
+    'TLDel90Cnt24'
+  ],
+  'Credit Utilization': [
+    'TL75UtilCnt',
+    'TL50UtilCnt'
+  ],
+  'Negative Indicators': [
+    'DerogCnt',
+    'CollectCnt',
+    'BanruptcyInd',
+    'TLBadCnt24',
+    'TLBadDerogCnt'
+  ]
+};
 
-// Short descriptions for each feature
+// Flattened array for backward compatibility
+const FEATURES = Object.values(FEATURE_CATEGORIES).flat();
+
+// Professional banking descriptions for each feature
 const FEATURE_DESCRIPTIONS = {
-  DerogCnt: 'Number of major derogatory reports',
-  CollectCnt: 'Number of collection accounts',
+  DerogCnt: 'Number of major derogatory reports on your credit file',
+  CollectCnt: 'Number of accounts currently in collection',
   BanruptcyInd: 'Bankruptcy indicator (1 = Yes, 0 = No)',
-  InqCnt06: 'Number of credit inquiries in last 6 months',
-  InqTimeLast: 'Months since last inquiry',
-  InqFinanceCnt24: 'Number of finance inquiries in last 24 months',
-  TLTimeFirst: 'Months since first trade line opened',
-  TLTimeLast: 'Months since most recent trade line opened',
-  TLCnt03: 'Number of trade lines opened in last 3 months',
-  TLCnt12: 'Number of trade lines opened in last 12 months',
-  TLCnt24: 'Number of trade lines opened in last 24 months',
-  TLCnt: 'Total number of trade lines',
-  TLSum: 'Total balance across all trade lines',
-  TLMaxSum: 'Maximum balance on a single trade line',
-  TLSatCnt: 'Number of satisfactory trade lines',
-  TLDel60Cnt: 'Number of trade lines delinquent 60+ days',
-  TLBadCnt24: 'Number of bad trade lines in last 24 months',
-  TL75UtilCnt: 'Number of trade lines with 75%+ utilization',
-  TL50UtilCnt: 'Number of trade lines with 50%+ utilization',
-  TLBalHCPct: 'Percent of balance on high credit lines',
-  TLSatPct: 'Percent of satisfactory trade lines',
-  TLDel3060Cnt24: 'Number of trade lines 30-60 days delinquent (24 mo)',
-  TLDel90Cnt24: 'Number of trade lines 90+ days delinquent (24 mo)',
-  TLDel60CntAll: 'Number of trade lines 60+ days delinquent (all time)',
-  TLOpenPct: 'Percent of open trade lines',
-  TLBadDerogCnt: 'Number of bad/derogatory trade lines',
-  TLOpen24Pct: 'Percent of trade lines opened in last 24 months',
+  InqCnt06: 'Number of credit inquiries in the last 6 months',
+  InqTimeLast: 'Months since your last credit inquiry',
+  InqFinanceCnt24: 'Number of finance-related inquiries in last 24 months',
+  TLTimeFirst: 'Months since your first credit account was opened',
+  TLTimeLast: 'Months since your most recent credit account was opened',
+  TLCnt03: 'Number of new credit accounts opened in last 3 months',
+  TLCnt12: 'Number of new credit accounts opened in last 12 months',
+  TLCnt24: 'Number of new credit accounts opened in last 24 months',
+  TLCnt: 'Total number of credit accounts on your file',
+  TLSum: 'Total outstanding balance across all credit accounts',
+  TLMaxSum: 'Highest balance on any single credit account',
+  TLSatCnt: 'Number of accounts in good standing',
+  TLDel60Cnt: 'Number of accounts 60+ days past due',
+  TLBadCnt24: 'Number of accounts with negative status in last 24 months',
+  TL75UtilCnt: 'Number of accounts with 75%+ credit utilization',
+  TL50UtilCnt: 'Number of accounts with 50%+ credit utilization',
+  TLBalHCPct: 'Percentage of balance relative to high credit limits',
+  TLSatPct: 'Percentage of accounts in good standing',
+  TLDel3060Cnt24: 'Number of accounts 30-60 days past due (24 months)',
+  TLDel90Cnt24: 'Number of accounts 90+ days past due (24 months)',
+  TLDel60CntAll: 'Total number of accounts 60+ days past due (all time)',
+  TLOpenPct: 'Percentage of accounts currently open',
+  TLBadDerogCnt: 'Number of accounts with derogatory status',
+  TLOpen24Pct: 'Percentage of accounts opened in last 24 months',
 };
 
 function LandingPage() {
+  const navigate = useNavigate();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!phoneNumber || !consent) return;
+    
+    setLoading(true);
+    // Simulate processing
+    setTimeout(() => {
+      navigate('/form');
+    }, 1000);
+  };
+
   return (
-    <div className="container landing">
-      <h1>Credit Scoring App</h1>
-      <p>Predict your credit score and get a detailed breakdown.</p>
-      <Link to="/form" className="btn primary">Get Started</Link>
+    <div className="landing-page">
+      {/* Header Section */}
+      <header className="landing-header">
+        <div className="header-content">
+          <div className="logo-section">
+            <div className="logo-icon">🏦</div>
+            <h1>Secure Bank</h1>
+          </div>
+          <nav className="header-nav">
+            <a href="#about">About</a>
+            <a href="#services">Services</a>
+            <a href="#contact">Contact</a>
+            <Link to="/form" className="nav-cta">Credit Assessment</Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="hero-section">
+        <div className="hero-content">
+          <div className="hero-text">
+            <h2>Check Your <strong>FREE</strong> Credit Score</h2>
+            <p className="hero-subtitle">
+              Get detailed credit report insights, free monthly updates, and personalized loan & credit card offers
+            </p>
+            <div className="hero-features">
+              <div className="feature-item">
+                <span className="feature-icon">📊</span>
+                <span>Detailed Credit Report Insights</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">🔄</span>
+                <span>Free Monthly Updates</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-icon">💳</span>
+                <span>Personalized Loan & Credit Card Offers</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="credit-score-form">
+            <div className="form-header">
+              <h3>Let's Get Started</h3>
+              <p>Enter your details to check your credit score</p>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="score-check-form">
+              <div className="form-group">
+                <label>Mobile Number</label>
+                <div className="phone-input">
+                  <span className="country-code">🇮🇳 +91</span>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="Enter 10-digit mobile number"
+                    maxLength="10"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="consent-section">
+                <label className="consent-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    required
+                  />
+                  <span className="checkmark"></span>
+                  I hereby appoint <strong>Secure Bank</strong> as my authorised representative to receive my credit information from CIBIL/Equifax/Experian/CRIF Highmark (bureau).
+                </label>
+                
+                <label className="consent-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    required
+                  />
+                  <span className="checkmark"></span>
+                  I hereby unconditionally consent to and instruct bureau to provide my credit information to me and <strong>Secure Bank</strong> on a month to month basis.
+                </label>
+              </div>
+              
+              <button 
+                type="submit" 
+                className="check-score-btn"
+                disabled={!phoneNumber || !consent || loading}
+              >
+                {loading ? 'Processing...' : 'Check Free Credit Score'}
+              </button>
+            </form>
+            
+            <div className="trust-badges">
+              <div className="trust-badge">
+                <span className="badge-icon">🔒</span>
+                <span>256-bit SSL Encrypted</span>
+              </div>
+              <div className="trust-badge">
+                <span className="badge-icon">🛡️</span>
+                <span>FDIC Insured</span>
+              </div>
+              <div className="trust-badge">
+                <span className="badge-icon">⚡</span>
+                <span>Instant Results</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Credit Score Section */}
+      <section className="about-section" id="about">
+        <div className="about-content">
+          <h2>CIBIL Score Calculation</h2>
+          <p className="about-description">
+            CIBIL score calculation depends on your past credit history and it determines your creditworthiness. 
+            The four major credit bureaus or Credit Information Companies (CICs) of India calculate, generate, 
+            and issue the credit scores of individuals by using their unique statistical algorithms.
+          </p>
+          
+          <div className="factors-grid">
+            <div className="factor-card">
+              <div className="factor-icon">📈</div>
+              <h3>Credit Repayment History</h3>
+              <p>Your credit score is calculated based on your credit history. Financial institutions share consumer credit information with credit bureaus twice every month.</p>
+            </div>
+            
+            <div className="factor-card">
+              <div className="factor-icon">💳</div>
+              <h3>Credit Utilisation Ratio</h3>
+              <p>The amount you spend on your credit card to the total available credit limit is considered as the Credit Utilisation Ratio.</p>
+            </div>
+            
+            <div className="factor-card">
+              <div className="factor-icon">🏦</div>
+              <h3>Credit Mix</h3>
+              <p>Your CIBIL score depends on the composition of your loan portfolio which may consist of both secured and unsecured credit.</p>
+            </div>
+            
+            <div className="factor-card">
+              <div className="factor-icon">🔍</div>
+              <h3>Recent Credit Enquiries</h3>
+              <p>Any credit enquiry done by a lender on your behalf is considered a hard enquiry. Multiple enquiries in short span shows your hunger for credit.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Ideal Score Section */}
+      <section className="ideal-score-section">
+        <div className="ideal-score-content">
+          <h2>An Ideal CIBIL Score</h2>
+          <p>An ideal CIBIL Score for loans or credit is generally any score between 750 and 900. A good CIBIL score ensures a higher chance of your loan application getting approved.</p>
+          
+          <div className="score-ranges">
+            <div className="score-range excellent">
+              <div className="range-label">Excellent</div>
+              <div className="range-score">750-900</div>
+              <div className="range-desc">High approval chances</div>
+            </div>
+            <div className="score-range good">
+              <div className="range-label">Good</div>
+              <div className="range-score">650-749</div>
+              <div className="range-desc">Moderate approval chances</div>
+            </div>
+            <div className="score-range poor">
+              <div className="range-label">Poor</div>
+              <div className="range-score">300-649</div>
+              <div className="range-desc">Low approval chances</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="landing-footer">
+        <div className="footer-content">
+          <div className="footer-section">
+            <h4>Secure Bank</h4>
+            <p>Your trusted financial partner for credit assessment and banking solutions.</p>
+          </div>
+          <div className="footer-section">
+            <h4>Quick Links</h4>
+            <Link to="/form">Credit Assessment</Link>
+            <a href="#about">About Us</a>
+            <a href="#services">Services</a>
+          </div>
+          <div className="footer-section">
+            <h4>Contact</h4>
+            <p>📞 1-800-SECURE</p>
+            <p>📧 support@securebank.com</p>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <p>&copy; 2024 Secure Bank. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -89,11 +340,11 @@ function InputForm() {
           FEATURES.map(f => [f, parseFloat(form[f]) || 0])
         ))
       });
-      if (!res.ok) throw new Error('Prediction failed');
+      if (!res.ok) throw new Error('Assessment failed');
       const data = await res.json();
       navigate('/results', { state: { ...data, input: form } });
     } catch (err) {
-      setError('Failed to get prediction. Please check your input and try again.');
+      setError('Unable to process your assessment. Please verify your information and try again.');
     } finally {
       setLoading(false);
     }
@@ -101,126 +352,157 @@ function InputForm() {
 
   return (
     <div className="container form">
-      <h2>Enter Your Credit Information</h2>
-      <p className="form-desc">
-        Please enter your financial and credit-related details for each field below. Use numbers only. If you are unsure about a field, enter 0 or leave it blank.
-      </p>
-      <form onSubmit={handleSubmit} className="credit-form">
-        <div className="form-grid">
-          {FEATURES.map(f => (
-            <div key={f} className="form-group">
-              <label>{f}</label>
-              <div className="feature-desc">{FEATURE_DESCRIPTIONS[f]}</div>
-              <input
-                type="number"
-                name={f}
-                value={form[f]}
-                onChange={handleChange}
-                step="any"
-                required
-              />
-            </div>
-          ))}
+      <div className="form-header">
+        <h2>Credit Assessment Form</h2>
+        <p className="form-desc">
+          Please provide your financial information for a comprehensive credit assessment. 
+          All data is encrypted and secure. Use numbers only - if unsure about a field, enter 0.
+        </p>
+        <div className="form-progress">
+          <div className="progress-step active">
+            <span className="step-number">1</span>
+            <span className="step-label">Enter Details</span>
+          </div>
+          <div className="progress-line"></div>
+          <div className="progress-step">
+            <span className="step-number">2</span>
+            <span className="step-label">Get Results</span>
+          </div>
         </div>
+      </div>
+      <form onSubmit={handleSubmit} className="credit-form">
+        {Object.entries(FEATURE_CATEGORIES).map(([categoryName, categoryFeatures]) => (
+          <div key={categoryName} className="form-category">
+            <h3 className="category-title">{categoryName}</h3>
+            <div className="form-grid">
+              {categoryFeatures.map(f => (
+                <div key={f} className="form-group">
+                  <label className="field-label">{f}</label>
+                  <div className="feature-desc">{FEATURE_DESCRIPTIONS[f]}</div>
+                  <input
+                    type="number"
+                    name={f}
+                    value={form[f]}
+                    onChange={handleChange}
+                    step="any"
+                    required
+                    placeholder="Enter value"
+                    className="field-input"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
         {error && <div className="error">{error}</div>}
-        <button className="btn primary" type="submit" disabled={loading}>{loading ? 'Predicting...' : 'Predict'}</button>
+        <div className="form-footer">
+          <div className="security-notice">
+            <span>🔒</span> Your information is protected with bank-level security
+          </div>
+          <button className="btn primary" type="submit" disabled={loading}>
+            {loading ? 'Processing Assessment...' : 'Generate Credit Report'}
+          </button>
+        </div>
       </form>
     </div>
   );
 }
 
-function describeArc(cx, cy, r, startAngle, endAngle) {
-  // Convert angles to radians
-  const start = (Math.PI / 180) * startAngle;
-  const end = (Math.PI / 180) * endAngle;
-  // Start and end points
-  const x1 = cx + r * Math.cos(start);
-  const y1 = cy + r * Math.sin(start);
-  const x2 = cx + r * Math.cos(end);
-  const y2 = cy + r * Math.sin(end);
-  // Large arc flag
-  const largeArc = endAngle - startAngle > 180 ? '1' : '0';
-  return [
-    'M', x1, y1,
-    'A', r, r, 0, largeArc, 1, x2, y2
-  ].join(' ');
-}
+const GaugeMeter = ({ score }) => {
+  const angle = useMotionValue(-90); // Start angle at -90° (left)
 
-function CreditScoreMeter({ probability, label }) {
-  // Map probability (0-1) to a score (300-850 typical credit score range)
-  const score = Math.round(300 + probability * 550);
-  // Gauge settings
-  const min = 300, max = 850;
-  const angleStart = -120, angleEnd = 120; // degrees
-  const percent = (score - min) / (max - min);
-  const angle = angleStart + (angleEnd - angleStart) * percent;
-  // Fixed arc segment boundaries for guaranteed visibility
-  const redEnd = -12;    // -120° to -12° (40%)
-  const yellowEnd = 72;  // -12° to 72° (35%)
-  const arcDefs = [
-    { color: '#e53935', from: angleStart, to: redEnd }, // Poor
-    { color: '#fbc02d', from: redEnd, to: yellowEnd }, // Good
-    { color: '#43a047', from: yellowEnd, to: angleEnd } // Excellent
+  useEffect(() => {
+    const mappedAngle = (score / 100) * 180 - 90;
+    animate(angle, mappedAngle, {
+      type: "spring",
+      stiffness: 80,
+      damping: 12,
+    });
+  }, [score]);
+
+  // Calculate a credit score range (300-850) for display
+  const creditScore = Math.round(300 + (score / 100) * 550);
+
+  // Coordinates for value labels (manually placed along arc)
+  const labels = [
+    { value: "300", x: 40, y: 135 },
+    { value: "500", x: 95, y: 45 },
+    { value: "650", x: 205, y: 45 },
+    { value: "850", x: 255, y: 135 },
   ];
-  // Tick marks and labels
-  const total = angleEnd - angleStart;
-  const ticks = [
-    { value: 300, angle: angleStart },
-    { value: 500, angle: angleStart + total * ((500-min)/(max-min)) },
-    { value: 650, angle: angleStart + total * ((650-min)/(max-min)) },
-    { value: 850, angle: angleEnd }
-  ];
+
   return (
     <div className="score-meter-gauge">
-      <svg width="240" height="150" viewBox="0 0 240 150">
-        {/* Gauge background arcs */}
-        {arcDefs.map((arc, i) => (
-          <path
-            key={arc.color}
-            d={describeArc(120, 120, 90, arc.from, arc.to)}
-            fill="none"
-            stroke={arc.color}
-            strokeWidth="18"
-            strokeLinecap="round"
-          />
+      <svg width="300" height="160" viewBox="0 0 300 160">
+        {/* Red segment (0–33) */}
+        <path
+          d="M 50 130 A 100 100 0 0 1 110 50"
+          fill="none"
+          stroke="#ff6b6b"
+          strokeWidth="20"
+        />
+        {/* Yellow segment (34–66) */}
+        <path
+          d="M 110 50 A 100 100 0 0 1 190 50"
+          fill="none"
+          stroke="#ffd93d"
+          strokeWidth="20"
+        />
+        {/* Green segment (67–100) */}
+        <path
+          d="M 190 50 A 100 100 0 0 1 250 130"
+          fill="none"
+          stroke="#6bcf7f"
+          strokeWidth="20"
+        />
+
+        {/* Value Labels */}
+        {labels.map((label, idx) => (
+          <text
+            key={idx}
+            x={label.x}
+            y={label.y}
+            fill="#e0e0e0"
+            fontSize="12"
+            fontWeight="bold"
+            textAnchor="middle"
+          >
+            {label.value}
+          </text>
         ))}
-        {/* Tick marks and numeric labels */}
-        {ticks.map((tick, i) => {
-          const rad = (Math.PI / 180) * tick.angle;
-          const x1 = 120 + 80 * Math.cos(rad);
-          const y1 = 120 + 80 * Math.sin(rad);
-          const x2 = 120 + 95 * Math.cos(rad);
-          const y2 = 120 + 95 * Math.sin(rad);
-          const lx = 120 + 110 * Math.cos(rad);
-          const ly = 120 + 110 * Math.sin(rad);
-          return (
-            <g key={tick.value}>
-              <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#888" strokeWidth="2" />
-              <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="1rem" fill="#444" fontWeight="bold">{tick.value}</text>
-            </g>
-          );
-        })}
-        {/* Needle/arrow */}
-        <g transform={`rotate(${angle} 120 120)`}>
-          <rect x="117" y="50" width="6" height="70" rx="3" fill="#222" />
-          <polygon points="120,38 125,58 115,58" fill="#222" />
-        </g>
-        {/* Center circle */}
-        <circle cx="120" cy="120" r="12" fill="#fff" stroke="#888" strokeWidth="3" />
+
+        {/* Needle */}
+        <motion.line
+          x1="150"
+          y1="130"
+          x2="150"
+          y2="40"
+          stroke="#64b5f6"
+          strokeWidth="4"
+          strokeLinecap="round"
+          style={{
+            transformBox: "fill-box",
+            transformOrigin: "150px 130px",
+            rotate: angle,
+          }}
+        />
+
+        {/* Center Knob */}
+        <circle cx="150" cy="130" r="6" fill="#2a2a2a" stroke="#64b5f6" strokeWidth="2" />
       </svg>
-      {/* Score text below the gauge */}
-      <div className="gauge-score-value" style={{marginTop: '0.7rem', fontSize: '2rem', fontWeight: 'bold', color: '#222', letterSpacing: '2px', textAlign: 'center'}}>{score}</div>
+
+      <div className="gauge-score-value">{creditScore}</div>
       <div className="gauge-labels">
-        <span style={{ color: '#e53935' }}>Poor</span>
-        <span style={{ color: '#fbc02d' }}>Good</span>
-        <span style={{ color: '#43a047' }}>Excellent</span>
+        <span style={{ color: '#ff6b6b' }}>High Risk</span>
+        <span style={{ color: '#ffd93d' }}>Moderate</span>
+        <span style={{ color: '#6bcf7f' }}>Low Risk</span>
       </div>
-      <div style={{fontSize: '0.95rem', color: '#888', marginTop: '0.2rem', textAlign: 'center'}}>
-        <span>Gauge shows your predicted credit score range</span>
+      <div style={{fontSize: '0.95rem', color: '#b0b0b0', marginTop: '0.2rem', textAlign: 'center'}}>
+        <span>Credit Score Range Assessment</span>
       </div>
     </div>
   );
-}
+};
 
 function ResultsDashboard() {
   const location = useLocation();
@@ -231,17 +513,43 @@ function ResultsDashboard() {
     return null;
   }
   const { predicted_class, probability, credit_score_label, input } = state;
+  
+  // Map credit score labels to banking terminology
+  const getRiskCategory = (label) => {
+    switch(label.toLowerCase()) {
+      case 'excellent': return 'Low Risk';
+      case 'good': return 'Moderate Risk';
+      case 'poor': return 'High Risk';
+      default: return label;
+    }
+  };
+  
+  const riskCategory = getRiskCategory(credit_score_label);
+  
   return (
     <div className="container results">
-      <h2>Prediction Results</h2>
-      <CreditScoreMeter probability={probability} label={credit_score_label} />
-      <div className="result-summary">
-        <div className={`score-label ${credit_score_label.toLowerCase()}`}>{credit_score_label}</div>
-        <div className="score-prob">Probability: {(probability * 100).toFixed(2)}%</div>
-        <div className="score-class">Predicted Class: {predicted_class}</div>
+      <div className="results-header">
+        <h2>Your Credit Assessment Report</h2>
+        <p className="report-subtitle">Generated by Secure Bank's AI Analysis System</p>
       </div>
-      <button className="btn secondary" onClick={() => navigate('/breakdown', { state })}>View Score Breakdown</button>
-      <button className="btn" onClick={() => navigate('/form')}>Try Again</button>
+      <GaugeMeter score={probability * 100} />
+      <div className="result-summary">
+        <div className={`score-label ${credit_score_label.toLowerCase()}`}>{riskCategory}</div>
+        <div className="score-prob">Confidence Level: {(probability * 100).toFixed(1)}%</div>
+        <div className="score-class">Risk Category: {predicted_class}</div>
+      </div>
+      <div className="action-buttons">
+        <button className="btn secondary" onClick={() => navigate('/breakdown', { state })}>
+           View Detailed Analysis
+        </button>
+        <button className="btn" onClick={() => navigate('/form')}>
+           New Assessment
+        </button>
+      </div>
+      <div className="disclaimer">
+        <p>This assessment is for informational purposes only and does not constitute financial advice. 
+        For personalized financial guidance, please consult with a Secure Bank representative.</p>
+      </div>
     </div>
   );
 }
@@ -249,16 +557,32 @@ function ResultsDashboard() {
 function ScoreBreakdown() {
   const location = useLocation();
   const { state } = location;
-  if (!state) return <div className="container">No data to show.</div>;
+  if (!state) return <div className="container">No assessment data available.</div>;
   const { input, probability, credit_score_label } = state;
+  
+  // Map credit score labels to banking terminology
+  const getRiskCategory = (label) => {
+    switch(label.toLowerCase()) {
+      case 'excellent': return 'Low Risk';
+      case 'good': return 'Moderate Risk';
+      case 'poor': return 'High Risk';
+      default: return label;
+    }
+  };
+  
+  const riskCategory = getRiskCategory(credit_score_label);
+  
   return (
     <div className="container breakdown">
-      <h2>Score Breakdown</h2>
-      <div className="breakdown-summary">
-        <div className="score-label {credit_score_label.toLowerCase()}">{credit_score_label}</div>
-        <div className="score-prob">Probability: {(probability * 100).toFixed(2)}%</div>
+      <div className="breakdown-header">
+        <h2>Detailed Credit Analysis</h2>
+        <p className="breakdown-subtitle">Comprehensive breakdown of your financial profile</p>
       </div>
-      <h3>Input Features</h3>
+      <div className="breakdown-summary">
+        <div className={`score-label ${credit_score_label.toLowerCase()}`}>{riskCategory}</div>
+        <div className="score-prob">Assessment Confidence: {(probability * 100).toFixed(1)}%</div>
+      </div>
+      <h3>Financial Profile Data</h3>
       <div className="breakdown-grid">
         {Object.entries(input).map(([k, v]) => (
           <div key={k} className="breakdown-item">
@@ -267,20 +591,34 @@ function ScoreBreakdown() {
           </div>
         ))}
       </div>
-      <Link to="/form" className="btn">Back to Form</Link>
+      <div className="breakdown-footer">
+        <Link to="/form" className="btn">← Back to Assessment</Link>
+        <div className="data-notice">
+          <span></span> Data provided for analysis purposes only
+        </div>
+      </div>
     </div>
   );
 }
 
 function App() {
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/';
+  
   return (
     <>
-      <nav className="navbar">
-        <Link to="/" className="nav-logo">CreditScoring</Link>
-        <div className="nav-links">
-          <Link to="/form">Input Form</Link>
-        </div>
-      </nav>
+      {!isLandingPage && (
+        <nav className="navbar">
+          <Link to="/" className="nav-logo">
+            <span className="logo-icon">🏦</span>
+            Secure Bank
+          </Link>
+          <div className="nav-links">
+            <Link to="/form">Credit Assessment</Link>
+            <Link to="/" className="home-link">Home</Link>
+          </div>
+        </nav>
+      )}
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/form" element={<InputForm />} />
