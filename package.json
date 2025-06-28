@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "react-router-dom": "^6.30.1"
+  },
+  "scripts": {
+    "start": "cd frontend && npm start",
+    "dev": "concurrently \"python app.py\" \"cd frontend && npm start\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+  }
+}
